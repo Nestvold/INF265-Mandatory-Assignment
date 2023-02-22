@@ -1,34 +1,33 @@
-from torchvision import datasets, transforms
-from torch import Generator
 from torch.utils.data import random_split
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
-
-
+from torchvision import transforms
 from typing import Callable
+from torch import Generator
+import ssl
 
-def load_CIFAR10(data_set: Callable, train_val_split=0.9, data_path='../data/', pre_processing=None):
 
-    if pre_processing is None:
+
+def load_dataset(data_set: Callable, train_val_split=0.9, data_path='../data/', preprocessor=None):
+
+    if preprocessor is None:
         preprocessor = transforms.Compose([
             transforms.CenterCrop(32),
             transforms.ToTensor(),
-            transforms.Normalize((0.4915, 0.4823, 0.4468),
-                                (0.2470, 0.2435, 0.2616))
+            transforms.Normalize((0.4915, 0.4823, 0.4468), # Normalizing by mean and 
+                                (0.2470, 0.2435, 0.2616))  # standard deviation.
         ])
     
     # load datasets
-    data_train_val = datasets.CIFAR10(
+    data_train_val = data_set(
         data_path,       
         train=True,      
         download=True,
-        transform=pre_processing)
+        transform=preprocessor)
 
-    data_test = datasets.CIFAR10(
+    data_test = data_set(
         data_path, 
         train=False,
         download=True,
-        transform=pre_processing)
+        transform=preprocessor)
 
     # train/validation split
     n_train = int(len(data_train_val) * train_val_split)
@@ -39,22 +38,18 @@ def load_CIFAR10(data_set: Callable, train_val_split=0.9, data_path='../data/', 
         [n_train, n_val],
         generator=Generator().manual_seed(123)
     )
-
-    print("Size of the train dataset:        ", len(data_train))
-    print("Size of the validation dataset:   ", len(data_val))
-    print("Size of the test dataset:         ", len(data_test))
     
-    return (data_train, data_val, data_test)
-
-def subset_dataset(data_train, data_val, data_test):
     label_map = {0: 0, 2: 1}
     class_names = ['airplane', 'bird']
 
     # For each dataset, keep only airplanes and birds
-    cifar2_train = [(img, label_map[label]) for img, label in data_train if label in [0, 2]]
-    cifar2_val = [(img, label_map[label]) for img, label in data_val if label in [0, 2]]
-    cifar2_test = [(img, label_map[label]) for img, label in data_test if label in [0, 2]]
-
-    return cifar2_train, cifar2_val, cifar2_test
-
-load_CIFAR10("CIFAR10")
+    data_train_ = [(img, label_map[label]) for img, label in data_train if label in [0, 2]]
+    data_val_ = [(img, label_map[label]) for img, label in data_val if label in [0, 2]]
+    data_test_ = [(img, label_map[label]) for img, label in data_test if label in [0, 2]]
+    
+    print(f"Dataset: {str(data_set)}")
+    print(f"Size of the train dataset:       , {len(data_train)}")
+    print(f"Size of the validation dataset:  , {len(data_val)}")
+    print(f"Size of the test dataset:        , {len(data_test)}")
+    
+    return (data_train_, data_val_, data_test_)
